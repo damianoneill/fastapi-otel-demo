@@ -1,0 +1,8 @@
+fastapi>=0.95.0,<0.96.0
+uvicorn>=0.21.0,<0.22.0
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-instrumentation-fastapi>=0.41b0
+opentelemetry-exporter-otlp-proto-http>=1.20.0
+aiohttp>=3.8.0
+asyncio>=3.4.3

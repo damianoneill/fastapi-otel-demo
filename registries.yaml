@@ -1,0 +1,4 @@
+mirrors:
+  "k3d-devenv-registry:5000":
+    endpoint:
+      - http://k3d-devenv-registry:5000
