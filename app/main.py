@@ -24,13 +24,15 @@ app = FastAPI(title="FastAPI OTEL Demo")
 # Get tracer
 tracer = trace.get_tracer(__name__)
 
+database = "/code/data/health.db"
+
 
 # Initialize SQLite database
 def init_db():
     """Initialize SQLite database with health check table."""
     with tracer.start_as_current_span("db.initialize") as span:
         try:
-            conn = sqlite3.connect("health.db")
+            conn = sqlite3.connect(database)
             cursor = conn.cursor()
 
             # Create health check table
@@ -67,7 +69,7 @@ def record_health_check(status: str, response_time_ms: int):
     """Record health check result to SQLite database."""
     with tracer.start_as_current_span("db.record_health_check") as span:
         try:
-            conn = sqlite3.connect("health.db")
+            conn = sqlite3.connect(database)
             cursor = conn.cursor()
 
             cursor.execute(
@@ -276,7 +278,7 @@ async def health_check():
     with tracer.start_as_current_span("health.check") as span:
         try:
             # Check database connection
-            conn = sqlite3.connect("health.db")
+            conn = sqlite3.connect(database)
             cursor = conn.cursor()
 
             # Get last health check

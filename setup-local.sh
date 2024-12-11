@@ -74,6 +74,7 @@ if kubectl cluster-info &>/dev/null; then
     echo "Removing k8s resources..."
     kubectl delete deployment "$APP_NAME" --ignore-not-found
     kubectl delete service "$APP_NAME" --ignore-not-found
+    kubectl delete serviceaccount "$APP_NAME-sa" --ignore-not-found
 fi
 
 # Delete existing cluster if it exists
@@ -125,6 +126,7 @@ echo "⬆️ Pushing image to local registry..."
 docker push "localhost:$REGISTRY_PORT/$APP_NAME:latest"
 
 echo "🚀 Deploying to Kubernetes..."
+kubectl apply -f k8s/serviceaccount.yaml -n "$NAMESPACE"
 kubectl apply -f k8s/deployment.yaml -n "$NAMESPACE"
 kubectl apply -f k8s/service.yaml -n "$NAMESPACE"
 
