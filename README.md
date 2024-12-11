@@ -9,6 +9,7 @@ This project demonstrates a FastAPI application with OpenTelemetry instrumentati
 - k3d
 - helm
 - curl
+- SQLite3
 
 ## Project Structure
 
@@ -59,6 +60,35 @@ This will:
 - FastAPI application: <http://localhost:8000>
 - FastAPI Swagger UI: <http://localhost:8000/docs>
 - Jaeger UI: <http://localhost:16686>
+
+## Features
+
+### Health Check System
+
+The application includes a sophisticated health check system that:
+
+- Maintains a SQLite database of health check history
+- Records response times and status
+- Automatically cleans up old records (keeps last 24 hours)
+- Provides detailed health metrics in OpenTelemetry traces
+
+### OpenTelemetry Integration
+
+The application is instrumented with OpenTelemetry:
+
+- Auto-instrumentation for FastAPI endpoints
+- SQLite3 instrumentation for database operations
+- Detailed product catalog simulation spans
+- Custom business metrics in traces
+- All traces are sent to Jaeger
+
+Example trace data features:
+
+- Product catalog lookups
+- Inventory checks
+- Pricing calculations
+- Database operations
+- Health check metrics
 
 ## Load Testing
 
@@ -116,15 +146,29 @@ docker push localhost:5111/fastapi-demo:latest
 kubectl rollout restart deployment fastapi-demo
 ```
 
-## OpenTelemetry Integration
+## API Endpoints
 
-The application is instrumented with OpenTelemetry:
+### GET /
 
-- Auto-instrumentation for FastAPI endpoints
-- Traces are sent to Jaeger
-- Custom spans can be added using the OpenTelemetry API
+Returns a simple hello world message.
 
-Example trace data can be viewed in Jaeger UI at <http://localhost:16686>
+### GET /items/{item_id}
+
+Simulates a product lookup with:
+
+- Product catalog query
+- Inventory availability check
+- Shipping calculations
+- Price computation with tax and discounts
+
+### GET /health
+
+Enhanced health check endpoint that:
+
+- Records heartbeat to SQLite database
+- Tracks response times
+- Returns last health check status
+- Maintains health check history
 
 ## Kubernetes Resources
 
@@ -132,9 +176,10 @@ Example trace data can be viewed in Jaeger UI at <http://localhost:16686>
 
 The application runs as a Kubernetes Deployment with:
 
-- 1 replicas
+- 1 replica
 - Health checks configured
 - OpenTelemetry environment variables set
+- SQLite persistence
 
 ### Service
 
