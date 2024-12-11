@@ -6,6 +6,7 @@ spec:
   selector:
     app: fastapi-demo
   ports:
-    - port: 80
-      targetPort: 8000
+    - name: http
+      port: 8000 # Service port
+      targetPort: 8000 # Container port
   type: ClusterIP

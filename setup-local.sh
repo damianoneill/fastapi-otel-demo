@@ -155,10 +155,3 @@ To view Jaeger logs:
    kubectl logs -f -l app.kubernetes.io/name=jaeger -n $JAEGER_NAMESPACE
 """
 
-# Cleanup on script interrupt
-cleanup() {
-    echo "🧹 Cleaning up resources..."
-    pkill -f "kubectl port-forward" || true
-}
-
-trap cleanup EXIT

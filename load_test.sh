@@ -71,6 +71,9 @@ make_requests() {
             my_successful=$((my_successful + 1))
         else
             my_failed=$((my_failed + 1))
+            if $VERBOSE; then
+                echo "Failed response: $response"
+            fi
         fi
 
         if $VERBOSE; then
@@ -81,7 +84,7 @@ make_requests() {
         sleep 0.$(( (RANDOM % 9) + 1 ))
     done
 
-    # Write results to temp files for later aggregation
+    # Write results to temp files
     echo "$my_requests" > "/tmp/loadtest_total_$user_id"
     echo "$my_successful" > "/tmp/loadtest_success_$user_id"
     echo "$my_failed" > "/tmp/loadtest_failed_$user_id"
@@ -95,7 +98,7 @@ echo "Press Ctrl+C to stop"
 START_TIME=$(date +%s)
 
 # Clean up any existing temp files
-rm -f /tmp/loadtest_* 2>/dev/null
+rm -f /tmp/loadtest_* 2>/dev/null || true
 
 # Start concurrent users
 for i in $(seq 1 $CONCURRENT_USERS); do
@@ -105,25 +108,41 @@ done
 # Wait for all background processes to complete
 wait
 
-# Aggregate results
+# Initialize result variables with defaults
 TOTAL_REQUESTS=0
 SUCCESSFUL_REQUESTS=0
 FAILED_REQUESTS=0
 
+# Aggregate results with error handling
 for i in $(seq 1 $CONCURRENT_USERS); do
-    TOTAL_REQUESTS=$((TOTAL_REQUESTS + $(cat "/tmp/loadtest_total_$i")))
-    SUCCESSFUL_REQUESTS=$((SUCCESSFUL_REQUESTS + $(cat "/tmp/loadtest_success_$i")))
-    FAILED_REQUESTS=$((FAILED_REQUESTS + $(cat "/tmp/loadtest_failed_$i")))
+    if [ -f "/tmp/loadtest_total_$i" ]; then
+        val=$(cat "/tmp/loadtest_total_$i")
+        TOTAL_REQUESTS=$((TOTAL_REQUESTS + val))
+    fi
+    if [ -f "/tmp/loadtest_success_$i" ]; then
+        val=$(cat "/tmp/loadtest_success_$i")
+        SUCCESSFUL_REQUESTS=$((SUCCESSFUL_REQUESTS + val))
+    fi
+    if [ -f "/tmp/loadtest_failed_$i" ]; then
+        val=$(cat "/tmp/loadtest_failed_$i")
+        FAILED_REQUESTS=$((FAILED_REQUESTS + val))
+    fi
 done
 
 # Clean up temp files
-rm -f /tmp/loadtest_*
+rm -f /tmp/loadtest_* 2>/dev/null || true
 
-# Calculate results
+# Calculate results with error handling
 END_TIME=$(date +%s)
 TOTAL_TIME=$((END_TIME - START_TIME))
-REQUESTS_PER_SECOND=$(bc <<< "scale=2; $TOTAL_REQUESTS / $TOTAL_TIME")
-SUCCESS_RATE=$(bc <<< "scale=2; ($SUCCESSFUL_REQUESTS * 100) / $TOTAL_REQUESTS")
+
+if [ "$TOTAL_REQUESTS" -gt 0 ]; then
+    REQUESTS_PER_SECOND=$(bc <<< "scale=2; $TOTAL_REQUESTS / $TOTAL_TIME")
+    SUCCESS_RATE=$(bc <<< "scale=2; ($SUCCESSFUL_REQUESTS * 100) / $TOTAL_REQUESTS")
+else
+    REQUESTS_PER_SECOND="0.00"
+    SUCCESS_RATE="0.00"
+fi
 
 # Print results
 echo -e "\nLoad Test Results:"
