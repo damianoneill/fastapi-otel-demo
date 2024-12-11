@@ -14,6 +14,26 @@ set -euo pipefail
 : "${JAEGER_NAMESPACE:=jaeger}"
 : "${JAEGER_CHART_VERSION:=2.5.12}"
 
+# Registry management functions
+registry_create() {
+    if ! k3d registry list "$REGISTRY_NAME" &>/dev/null; then
+        echo "📦 Creating registry..."
+        k3d registry create "$REGISTRY_NAME" \
+            --port 0.0.0.0:${REGISTRY_PORT} \
+            --image docker.io/library/registry:2
+
+        echo -n '>>> Waiting for Registry to be ready '
+        until [ "$(docker inspect -f {{.State.Running}} $REGISTRY_NAME 2>/dev/null)" == "true" ]; do
+            sleep 0.1
+            echo -n '.'
+        done
+        echo
+        echo '>>> Registry ready'
+    else
+        echo ">>> Registry already exists and is running"
+    fi
+}
+
 # Required tools check
 REQUIRED_BINARIES=("kubectl" "k3d" "docker" "helm")
 
@@ -36,12 +56,15 @@ for binary in "${REQUIRED_BINARIES[@]}"; do
     check_binary "$binary"
 done
 
+# Ensure registry is running
+registry_create
+
 echo "🚀 Starting fresh setup..."
 
 echo "🧹 Cleaning up existing resources..."
 
 # Kill existing port forwards
-if pgrep -f "kubectl port-forward.*$APP_NAME" > /dev/null; then
+if pgrep -f "kubectl port-forward.*$APP_NAME" >/dev/null; then
     echo "Killing port forwards..."
     pkill -f "kubectl port-forward.*$APP_NAME" || true
 fi
@@ -65,8 +88,7 @@ k3d cluster create "$CLUSTER_NAME" \
     --servers ${NO_OF_MASTERS} \
     --port "8080:80@loadbalancer" \
     --k3s-arg "--disable=traefik@server:*" \
-    --registry-use k3d-devenv-registry:5000 \
-    --volume "$(pwd)/registries.yaml:/etc/rancher/k3s/registries.yaml@all"
+    --registry-use k3d-devenv-registry:5000
 
 echo "🔌 Connecting registry to cluster network..."
 docker network connect "k3d-$CLUSTER_NAME" "$REGISTRY_NAME" || true
@@ -132,3 +154,11 @@ To verify deployment:
 To view Jaeger logs:
    kubectl logs -f -l app.kubernetes.io/name=jaeger -n $JAEGER_NAMESPACE
 """
+
+# Cleanup on script interrupt
+cleanup() {
+    echo "🧹 Cleaning up resources..."
+    pkill -f "kubectl port-forward" || true
+}
+
+trap cleanup EXIT
