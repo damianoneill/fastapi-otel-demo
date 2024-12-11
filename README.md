@@ -1,6 +1,6 @@
 # FastAPI OpenTelemetry Demo
 
-This project demonstrates a FastAPI application with OpenTelemetry instrumentation, running in a local Kubernetes cluster (k3d) with Jaeger for distributed tracing.
+This project demonstrates a FastAPI application with OpenTelemetry instrumentation, running in a local Kubernetes cluster (k3d) with Jaeger for distributed tracing. It includes security hardening features and proper pod security configuration.
 
 ## Prerequisites
 
@@ -21,7 +21,8 @@ fastapi-otel-demo/
 │   └── telemetry.py
 ├── k8s/
 │   ├── deployment.yaml
-│   └── service.yaml
+│   ├── service.yaml
+│   └── serviceaccount.yaml
 ├── .dockerignore
 ├── .gitignore
 ├── Dockerfile
@@ -52,7 +53,7 @@ This will:
 - Create a k3d cluster
 - Set up a local registry
 - Deploy Jaeger
-- Build and deploy the FastAPI application
+- Build and deploy the FastAPI application with security hardening
 - Set up port forwarding
 
 3. Access the services:
@@ -63,14 +64,27 @@ This will:
 
 ## Features
 
+### Security Hardening
+
+The application includes comprehensive security features:
+
+- Non-root container execution with specific UID/GID (999)
+- Read-only root filesystem
+- Drop all capabilities
+- Prevent privilege escalation
+- Dedicated ServiceAccount
+- Resource limits and requests
+- Proper volume permissions for writable directories
+
 ### Health Check System
 
 The application includes a sophisticated health check system that:
 
-- Maintains a SQLite database of health check history
+- Maintains a SQLite database of health check history in a dedicated volume
 - Records response times and status
 - Automatically cleans up old records (keeps last 24 hours)
 - Provides detailed health metrics in OpenTelemetry traces
+- Includes startup, liveness, and readiness probes with optimized timing
 
 ### OpenTelemetry Integration
 
@@ -172,18 +186,40 @@ Enhanced health check endpoint that:
 
 ## Kubernetes Resources
 
+### ServiceAccount
+
+Dedicated ServiceAccount for the application that:
+
+- Provides identity for the application pod
+- Enables proper RBAC controls
+- Follows security best practices
+
 ### Deployment
 
 The application runs as a Kubernetes Deployment with:
 
 - 1 replica
-- Health checks configured
+- Security hardening features
+  - Non-root user execution
+  - Read-only root filesystem
+  - Dropped capabilities
+  - Resource limits
+- Health checks configured with startup, liveness, and readiness probes
 - OpenTelemetry environment variables set
-- SQLite persistence
+- SQLite persistence in a dedicated volume mount
+- Proper security contexts at both pod and container level
 
 ### Service
 
 Exposes the application within the cluster and for port-forwarding.
+
+### Volumes
+
+The application uses several EmptyDir volumes:
+
+- `/code/data`: For SQLite database storage
+- `/tmp`: For temporary file operations
+- `/home/nonroot`: For home directory access
 
 ## Cleanup
 
